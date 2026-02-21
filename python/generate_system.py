@@ -6,7 +6,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, required=True)
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--out", type=str, default="outputs/system.npz")
+    ap.add_argument("--out", type=str, default="../outputs/system.npz")
     ap.add_argument("--dtype", type=str, default="float64", choices=["float64", "float32"])
     args = ap.parse_args()
 

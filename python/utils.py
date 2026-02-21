@@ -2,7 +2,7 @@ import os
 import json
 import time
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Optional, Dict, Any
 
 import numpy as np
 
@@ -10,9 +10,8 @@ import numpy as np
 @dataclass
 class SolveConfig:
     save_states: bool = True
-    save_every: int = 1     #save every iteration
+    save_every: int = 1
     out_dir: str = "outputs/run"
-    dtype: str = "float64"
 
 
 def ensure_dir(path: str) -> None:
@@ -29,9 +28,7 @@ def make_diagonally_dominant_system(n: int, seed: int = 0, dtype=np.float64) -> 
     b = rng.normal(0, 1, size=(n,)).astype(dtype)
 
     row_sums = np.sum(np.abs(A), axis=1) - np.abs(np.diag(A))
-    diag = row_sums + 1.0
-    A[np.diag_indices(n)] = diag
-
+    A[np.diag_indices(n)] = row_sums + 1.0
     return A, b
 
 
@@ -40,20 +37,20 @@ def save_state(out_dir: str, k: int, A: np.ndarray, b: np.ndarray) -> None:
     np.savez_compressed(os.path.join(out_dir, f"state_{k:04d}.npz"), A=A, b=b)
 
 
-def save_metadata(out_dir: str, meta: dict) -> None:
+def save_metadata(out_dir: str, meta: Dict[str, Any]) -> None:
     ensure_dir(out_dir)
     with open(os.path.join(out_dir, "meta.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
 
-# solves the system after the elimination part
-def back_substitution(U: np.ndarray, y: np.ndarray) -> np.ndarray:
+
+def back_substitution(U: np.ndarray, y: np.ndarray, eps: float = 0.0) -> np.ndarray:
     n = U.shape[0]
     x = np.zeros(n, dtype=U.dtype)
     for i in range(n - 1, -1, -1):
-        s = np.dot(U[i, i + 1:], x[i + 1:])
         piv = U[i, i]
-        if piv == 0:
-            raise ZeroDivisionError(f"Zero pivot at row {i} during back-substitution.")
+        if abs(float(piv)) <= eps:
+            raise ZeroDivisionError(f"Zero/near-zero pivot at row {i} during back-substitution.")
+        s = np.dot(U[i, i + 1:], x[i + 1:])
         x[i] = (y[i] - s) / piv
     return x
 
